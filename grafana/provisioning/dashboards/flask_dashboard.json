@@ -1,0 +1,104 @@
+{
+  "title": "Flask Monitoring Dashboard",
+  "description": "Complete monitoring for Flask + MySQL",
+  "tags": ["flask", "prometheus"],
+  "timezone": "UTC",
+  "panels": [
+    {
+      "title": "HTTP Request Rate",
+      "type": "graph",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(flask_http_requests_total[1m])) by (endpoint)",
+          "legendFormat": "{{endpoint}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"}
+      }
+    },
+    {
+      "title": "Request Latency (P99)",
+      "type": "graph",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, rate(flask_http_request_duration_seconds_bucket[1m]))",
+          "legendFormat": "P99 {{endpoint}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "unit": "s",
+        "decimals": 3
+      }
+    },
+    {
+      "title": "System Saturation",
+      "type": "gauge",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 8},
+      "targets": [
+        {
+          "expr": "flask_system_saturation{resource_type='cpu'}",
+          "legendFormat": "CPU Usage",
+          "refId": "A"
+        },
+        {
+          "expr": "flask_system_saturation{resource_type='memory'}",
+          "legendFormat": "Memory Usage",
+          "refId": "B"
+        },
+        {
+          "expr": "flask_system_saturation{resource_type='db_connections'}",
+          "legendFormat": "DB Connections",
+          "refId": "C"
+        }
+      ],
+      "options": {
+        "min": 0,
+        "max": 100,
+        "unit": "percent"
+      }
+    },
+    {
+      "title": "MySQL Transaction Errors",
+      "type": "piechart",
+      "gridPos": {"x": 12, "y": 8, "w": 6, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(mysql_transaction_errors_total[5m])) by (error_type)",
+          "legendFormat": "{{error_type}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Transaction Duration",
+      "type": "heatmap",
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "rate(mysql_transaction_duration_seconds_bucket[1m])",
+          "format": "heatmap",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "color": {"mode": "spectrum"}
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "datasource": "Prometheus",
+        "query": "label_values(flask_http_requests_total, instance)"
+      }
+    ]
+  },
+  "time": {"from": "now-6h", "to": "now"},
+  "refresh": "30s"
+}
