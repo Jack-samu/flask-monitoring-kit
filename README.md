@@ -7,11 +7,24 @@
 ### 引入项目
 ```shell
 git clone https://github.com/Jack-samu/flask-monitoring-kit.git vendor/flask-monitoring-kit
-
-pip install -e ./vendor/flask-monitoring-kit
 ```
 
-### 在项目中进行应用：
+**修改项目根路径yml部署文件**
+```yml
+# 添加如下配置
+include:
+  - ./vendor/flask-monitoring-kit/docker-compose-monitoring.yml
+```
+
+**flask项目根路径下添加如下配置**
+```
+# grafana账号
+GF_SECURITY_ADMIN=阿巴巴
+GF_SECURITY_ADMIN_PWD=aBb111@
+```
+
+### 在flask主体项目中进行应用：
+**添加应用代码：**
 ```python
 # 例，在工厂函数中添加
 import sys
@@ -30,9 +43,23 @@ def create_app(name='blog-app', config = Config):
     return app
 ```
 
-### 部署到docker
-项目设定是将mysql部署到docker中的mysql_service，和主体项目相扣。
+### 命令执行
 ```shell
-# 需要在主体项目中flask-backend以及mysql_service之后启动
-sudo docker compose up -d
+# 启动，项目根路径下
+docker compose up -d --build
+
+# 停止
+docker compose down
+
+# 停止并清理对应build得镜像
+docker compose down --rmi local
+
+# 查看某个service日志
+docker logs container_name
+```
+
+### 预想结果
+
+```shell
+# 对于prometheus和mysqld-exporter
 ```

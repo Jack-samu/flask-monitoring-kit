@@ -1,38 +1,43 @@
-version: '3.8'
-
 networks:
-  backend-network:
+  flask-backend-net:
     external: true
 
 services:
   mysqld-exporter:
     image: prom/mysqld-exporter
+    container_name: mysqld-exporter
     volumes:
-      - ./mysql/my.cnf:/.my.cnf
+      - ${PWD}/vendor/flask-monitoring-kit/mysql/my.cnf:/.my.cnf
+    env_file:
+      - ${PWD}/.env
     networks:
-      - backend-network
+      - flask-net
     ports:
       - "9104:9104"
     depends_on:
-      mysql_service:
-        condition: service_healthy
+      - mysql_service
 
   prometheus:
     image: prom/prometheus
+    container_name: prometheus-service
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus:/etc/prometheus
+      - ${PWD}/vendor/flask-monitoring-kit/prometheus:/etc/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     networks:
-      - backend-network
+      - flask-net
     depends_on:
       - mysqld-exporter
 
   grafana:
     image: grafana/grafana
+    container_name: grafana-service
+    env_file:
+      - ${PWD}/.env
     environment:
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
       GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PWD}
       GF_SECURITY_DISABLE_INITIAL_ADMIN_PASSWORD_HINT: "true"
@@ -40,21 +45,26 @@ services:
       # 邮件通知核心
       GF_SMTP_ENABLED: "true"
       GF_SMTP_HOST: ${MAIL_SERVER}:${MAIL_PORT}
-      GF_SMTP_USER: ${MAIL_USER}
+      GF_SMTP_USER: ${MAIL_USERNAME}
       GF_SMTP_PASSWORD: ${MAIL_PASSWORD}
       GF_SMTP_FROM_ADDRESS: ${MAIL_USERNAME}
       GF_SMTP_FROM_NAME: "Grafana 监控报警"
       GF_SMTP_SSL_ENABLED: "false"
       GF_SMTP_STARTTLS_ENABLED: "false"
       GF_SMTP_SKIP_VERIFY: "true"
+    user: "0"
     ports:
       - "3000:3000"
     volumes:
-      - ./grafana:/var/lib/grafana    # 挂载本地配置文件并进行数据持久化到本地
+      - ${PWD}/vendor/flask-monitoring-kit/grafana:/var/lib/grafana    # 挂载本地配置文件并进行数据持久化到本地
+      - ${PWD}/vendor/flask-monitoring-kit/grafana/provisioning:/etc/grafana/provisioning
+      - ${PWD}/vendor/flask-monitoring-kit/grafana/config/grafana.ini:/etc/grafana/grafana.ini
     networks:
-      - backend-network
+      - flask-net
     command: >
-      sh -c "chown -R 472:472 /var/lib/grafana &&
-            exec grafana-server --homepath=/usr/share/grafana"
+      sh -c "
+      chown -R 472:472 /var/lib/grafana &&
+      /run.sh"
     depends_on:
       - prometheus
+      - flask-backend
