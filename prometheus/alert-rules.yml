@@ -1,0 +1,59 @@
+groups:
+  - name: flask-alerts
+    rules:
+    - alert: HighErrorRate
+      expr: rate(flask_http_errors_total[5m]) / rate(flask_http_requests_total[5m]) > 0.05
+      for: 10m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High error rate ({{ $value }}%)"
+        description: "错误率太高了，还不来看一下，要死啊"
+
+    - alert: MySQLDeadlock
+      expr: rate(mysql_transaction_errors_total{error_type="deadlock"}[1h]) > 0
+      labels:
+        severity: warning
+      annotations:
+        description: "Deadlock detected in MySQL"
+  
+  - name: system-alerts
+    rules:
+      - alert: NodeExporterDown
+        expr: up{job='node-exporter'} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "node 挂了"
+          description: 'node-exporter挂了，快来看看为啥'
+
+      # 系统CPU使用率过高
+      - alert: HighCPUUsage
+        expr: 100 - (avg(irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "系统CPU使用率过高"
+          description: "系统CPU使用率为 {{ $value }}%，超过85%阈值"
+
+      # 系统内存使用率过高
+      - alert: HighMemoryUsage
+        expr: 100 * (1 - ((node_memory_MemAvailable_bytes) / (node_memory_MemTotal_bytes))) > 90
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "系统内存使用率过高"
+          description: "系统内存使用率为 {{ $value }}%，超过90%阈值"
+
+      # 磁盘空间不足
+      - alert: DiskSpaceLow
+        expr: 100 * (1 - ((node_filesystem_avail_bytes{mountpoint="/"}) / (node_filesystem_size_bytes{mountpoint="/"}))) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "磁盘空间不足"
+          description: "根分区磁盘使用率为 {{ $value }}%，超过85%阈值"
